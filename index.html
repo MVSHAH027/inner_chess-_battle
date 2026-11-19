@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>The Inner Chess Battle : Checkmate Your Demons : The War Within !</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1420;
+      --panel: #182032;
+      --panel-2: #202a42;
+      --border: #2e3b59;
+      --text: #f3f6fc;
+      --muted: #9aa8c7;
+      --gold: #f5b942;
+      --emerald: #2fd68d;
+      --crimson: #ef4d5e;
+      --cyan: #38bdf8;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: var(--bg); color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #app { width: 100%; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Top Header */
+    #topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 8px 14px; background: var(--panel);
+      border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 10;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .brand-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--gold), #d97706);
+      display: grid; place-items: center; font-size: 18px; color: #111; font-weight: 900; flex-shrink: 0;
+    }
+    .brand-title { font-weight: 700; font-size: 0.96rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .diff-badge {
+      padding: 3px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+    .diff-easy { background: rgba(47, 214, 141, 0.18); color: var(--emerald); border: 1px solid rgba(47, 214, 141, 0.45); }
+    .diff-medium { background: rgba(245, 185, 66, 0.18); color: var(--gold); border: 1px solid rgba(245, 185, 66, 0.45); }
+    .diff-difficult { background: rgba(239, 77, 94, 0.18); color: var(--crimson); border: 1px solid rgba(239, 77, 94, 0.45); }
+
+    .top-actions { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0; }
+
+    .btn {
+      border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+      padding: 7px 11px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+      gap: 5px; transition: transform 0.12s, background 0.15s, border-color 0.15s; white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) { background: #293654; border-color: #4a5e8c; }
+    .btn:active:not(:disabled) { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-gold { background: linear-gradient(135deg, #f5b942, #d98218); color: #121212; border-color: #fbbf24; }
+    .btn-gold:hover:not(:disabled) { background: linear-gradient(135deg, #fbbf24, #e58e26); }
+    .btn-emerald { background: linear-gradient(135deg, #2fd68d, #18a567); color: #091b12; border-color: #34d399; }
+    .btn-cyan { background: rgba(56, 189, 248, 0.16); color: var(--cyan); border-color: rgba(56, 189, 248, 0.45); }
+    .btn-crimson { background: rgba(239, 77, 94, 0.18); color: #ff7b89; border-color: rgba(239, 77, 94, 0.5); }
+
+    .mode-switch {
+      display: inline-flex; background: #101624; border: 1px solid var(--border); border-radius: 8px; padding: 2px;
+    }
+    .mode-switch button {
+      border: none; background: transparent; color: var(--muted); padding: 5px 9px;
+      font-size: 0.76rem; font-weight: 600; border-radius: 6px; cursor: pointer;
+    }
+    .mode-switch button.active { background: var(--gold); color: #111; }
+
+    /* Workspace */
+    #workspace { flex: 1; min-height: 0; display: flex; overflow: hidden; }
+    #board-container {
+      flex: 1; min-width: 0; min-height: 0; position: relative;
+      background: radial-gradient(circle at center, #1c263b 0%, #0b0f19 100%);
+      touch-action: none; overflow: hidden;
+    }
+    #board-container canvas { display: block; width: 100%; height: 100%; }
+
+    #controls-panel {
+      background: var(--panel); border-left: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 10px; padding: 13px;
+      overflow-y: auto; flex-shrink: 0;
+    }
+
+    #credit-footer {
+      flex-shrink: 0; background: #101624; border-top: 1px solid var(--border);
+      padding: 4px 10px; text-align: center; font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.3px; color: var(--muted);
+    }
+
+    /* Desktop Mode */
+    body.mode-desktop #workspace { flex-direction: row; }
+    body.mode-desktop #controls-panel { width: 360px; }
+    body.mode-desktop #mobile-stats-strip { display: none; }
+
+    /* Mobile Mode — 2-row Header so Full Title is Always Visible, ZERO overlays on chessboard */
+    body.mode-mobile #topbar {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 6px 8px;
+      gap: 5px;
+    }
+    body.mode-mobile .brand {
+      width: 100%;
+      gap: 7px;
+    }
+    body.mode-mobile .brand-icon {
+      width: 26px;
+      height: 26px;
+      font-size: 14px;
+      border-radius: 6px;
+    }
+    body.mode-mobile .brand-title {
+      font-size: 0.76rem;
+      line-height: 1.22;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+      flex: 1;
+      color: #fde68a;
+    }
+    body.mode-mobile .diff-badge {
+      font-size: 0.65rem;
+      padding: 2px 7px;
+    }
+    body.mode-mobile .top-actions {
+      width: 100%;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    body.mode-mobile .top-actions .btn {
+      padding: 5px 7px;
+      font-size: 0.71rem;
+      flex: 1;
+    }
+    body.mode-mobile #btn-sound {
+      flex: 0 0 auto;
+      padding: 5px 8px;
+    }
+    body.mode-mobile .mode-switch button { padding: 4px 7px; font-size: 0.68rem; }
+    body.mode-mobile #mobile-stats-strip {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      padding: 4px 10px; background: #131a29; border-bottom: 1px solid var(--border);
+      font-size: 0.74rem; flex-shrink: 0;
+    }
+    body.mode-mobile #workspace { flex-direction: column; }
+    body.mode-mobile #controls-panel {
+      width: 100%; border-left: none; border-top: 1px solid var(--border);
+      padding: 6px 9px; gap: 5px; max-height: 36dvh;
+    }
+    body.mode-mobile .desktop-only-block { display: none !important; }
+    body.mode-mobile .pieces-grid { grid-template-columns: repeat(6, 1fr); gap: 4px; }
+    body.mode-mobile .piece-card { padding: 4px 2px; gap: 1px; }
+    body.mode-mobile .piece-icon { font-size: 1.15rem; }
+    body.mode-mobile .piece-name { font-size: 0.62rem; }
+    body.mode-mobile .piece-sub { display: none; }
+    body.mode-mobile .enemies-strip { grid-template-columns: repeat(6, 1fr); gap: 4px; }
+    body.mode-mobile .enemy-chip { padding: 3px 2px; font-size: 0.6rem; }
+    body.mode-mobile .status-banner { padding: 4px 7px; font-size: 0.71rem; }
+    body.mode-mobile .actions-row .btn { padding: 6px 5px; font-size: 0.72rem; }
+    body.mode-mobile #credit-footer { font-size: 0.65rem; padding: 3px 8px; }
+
+    /* Stats & Cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-box { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 7px 10px; }
+    .stat-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-val { font-size: 1.14rem; font-weight: 800; margin-top: 1px; }
+    .stat-val.gold { color: var(--gold); }
+    .stat-val.emerald { color: var(--emerald); }
+    .stat-val.cyan { color: var(--cyan); }
+
+    .enemies-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .enemy-chip {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 4px 6px; font-size: 0.72rem; font-weight: 700; display: flex;
+      align-items: center; justify-content: center; gap: 4px; transition: all 0.2s;
+      white-space: nowrap; overflow: hidden;
+    }
+    .enemy-chip.conquered {
+      opacity: 0.42; text-decoration: line-through; border-color: var(--emerald);
+      color: var(--emerald); background: rgba(47, 214, 141, 0.08);
+    }
+
+    .status-banner {
+      background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 9px; padding: 7px 10px; font-size: 0.81rem; line-height: 1.35; color: #dbeafe;
+    }
+    .status-banner.demo { background: rgba(245, 185, 66, 0.16); border-color: rgba(245, 185, 66, 0.5); color: #fef3c7; }
+
+    .section-title {
+      font-size: 0.73rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--muted); display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .pieces-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+    .piece-card {
+      background: var(--panel-2); border: 2px solid var(--border); border-radius: 10px;
+      padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+      cursor: pointer; color: var(--text); transition: all 0.15s;
+    }
+    .piece-card:hover:not(:disabled) { border-color: var(--cyan); transform: translateY(-2px); }
+    .piece-card.selected { border-color: var(--gold); background: rgba(245, 185, 66, 0.16); box-shadow: 0 0 14px rgba(245, 185, 66, 0.32); }
+    .piece-card.used { opacity: 0.3; cursor: not-allowed; border-style: dashed; transform: none; }
+    .piece-icon { font-size: 1.48rem; line-height: 1; }
+    .piece-name { font-size: 0.75rem; font-weight: 700; }
+    .piece-sub { font-size: 0.65rem; color: var(--muted); }
+
+    .actions-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .actions-row .btn { flex: 1; }
+
+    .mp-banner {
+      background: linear-gradient(135deg, rgba(245, 185, 66, 0.14), rgba(56, 189, 248, 0.1));
+      border: 1px solid rgba(245, 185, 66, 0.35); border-radius: 10px; padding: 7px 10px; font-size: 0.78rem;
+    }
+    .mp-banner-top { display: flex; justify-content: space-between; font-weight: 700; color: var(--gold); }
+    .mobile-stat-pill { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(7, 10, 18, 0.82); backdrop-filter: blur(5px);
+      display: none; align-items: center; justify-content: center; padding: 14px; z-index: 100;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 540px; max-height: 90dvh; background: var(--panel);
+      border: 1px solid var(--border); border-radius: 16px; display: flex;
+      flex-direction: column; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+    }
+    .modal-header {
+      padding: 14px 18px; background: var(--panel-2); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-title { font-size: 1.08rem; font-weight: 800; }
+    .modal-close { background: transparent; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 2px 6px; }
+    .modal-body { padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem; line-height: 1.5; }
+    .modal-footer { padding: 12px 18px; background: var(--panel-2); border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+    .rule-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .rule-card h4 { margin: 0 0 4px 0; color: var(--gold); font-size: 0.92rem; }
+    .rule-card p { margin: 0; color: #d7e0f3; font-size: 0.84rem; }
+    .legend-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 6px; }
+    .legend-item { background: #131a29; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 0.8rem; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+    .seg-row { display: flex; gap: 6px; }
+    .seg-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font-weight: 700; cursor: pointer; }
+    .seg-btn.active { background: var(--gold); color: #111; border-color: var(--gold); }
+    input[type="text"] { width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border); background: #101624; color: var(--text); font-size: 0.9rem; outline: none; }
+    input[type="text"]:focus { border-color: var(--gold); }
+    .player-names-list { display: flex; flex-direction: column; gap: 7px; }
+
+    .score-summary-hero {
+      text-align: center; padding: 12px;
+      background: linear-gradient(135deg, rgba(245, 185, 66, 0.14), rgba(47, 214, 141, 0.1));
+      border: 1px solid rgba(245, 185, 66, 0.35); border-radius: 12px;
+    }
+    .score-summary-hero .big { font-size: 1.9rem; font-weight: 900; color: var(--gold); }
+    .score-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .score-table th, .score-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); text-align: left; }
+    .score-table th { color: var(--muted); font-size: 0.74rem; text-transform: uppercase; }
+    .rank-1 { color: var(--gold); font-weight: 800; }
+  </style>
+</head>
+<body class="mode-desktop">
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-icon">♞</div>
+      <div class="brand-title" title="The Inner Chess Battle : Checkmate Your Demons : The War Within !">The Inner Chess Battle : Checkmate Your Demons : The War Within !</div>
+      <span id="diff-badge" class="diff-badge diff-easy">Easy</span>
+    </div>
+
+    <div class="top-actions">
+      <div class="mode-switch" title="Layout Mode">
+        <button id="btn-mode-desktop" class="active" onclick="setLayoutMode('desktop')">Desktop</button>
+        <button id="btn-mode-mobile" onclick="setLayoutMode('mobile')">Mobile</button>
+      </div>
+      <button id="btn-sound" class="btn" onclick="toggleSound()" title="Toggle Sound">🔊</button>
+      <button class="btn btn-cyan" onclick="openRules()">📖 Game Rules</button>
+      <button class="btn btn-gold" onclick="openSetupModal()">🎮 Mode / Players</button>
+    </div>
+  </header>
+
+  <div id="mobile-stats-strip">
+    <span class="mobile-stat-pill">⚔️ <span id="m-soldiers">0/6</span></span>
+    <span class="mobile-stat-pill" style="color:var(--gold)">★ <span id="m-score">0</span></span>
+    <span class="mobile-stat-pill" style="color:var(--cyan)">⏱ <span id="m-time">00:00.0</span></span>
+    <span class="mobile-stat-pill">🎯 <span id="m-moves">6</span> left</span>
+    <span id="m-mp-tag" class="mobile-stat-pill" style="color:var(--emerald); display:none;"></span>
+  </div>
+
+  <main id="workspace">
+    <div id="board-container"></div>
+
+    <aside id="controls-panel">
+      <div id="mp-banner" class="mp-banner" style="display:none;">
+        <div class="mp-banner-top">
+          <span id="mp-player-turn">Player 1</span>
+          <span id="mp-round-info">Round 1 / 3</span>
+        </div>
+        <div id="mp-mini-standings" style="color:var(--muted); font-size:0.74rem; margin-top:3px;"></div>
+      </div>
+
+      <div class="stats-grid desktop-only-block">
+        <div class="stat-box"><div class="stat-label">Conquered</div><div id="d-soldiers" class="stat-val emerald">0 / 6</div></div>
+        <div class="stat-box"><div class="stat-label">Live Score</div><div id="d-score" class="stat-val gold">0</div></div>
+        <div class="stat-box"><div class="stat-label">Time</div><div id="d-time" class="stat-val cyan">00:00.0</div></div>
+        <div class="stat-box"><div class="stat-label">Moves Left</div><div id="d-moves" class="stat-val">6</div></div>
+      </div>
+
+      <div id="enemies-strip" class="enemies-strip"></div>
+
+      <div id="status-banner" class="status-banner">
+        Select any unused piece below, then tap a highlighted square on the 3D board!
+      </div>
+
+      <div class="section-title">
+        <span>Your 6 Pieces (1 Use Each, Any Order)</span>
+        <span id="pieces-left-label">6 / 6</span>
+      </div>
+      <div id="pieces-grid" class="pieces-grid"></div>
+
+      <div class="actions-row">
+        <button id="btn-show-me" class="btn btn-gold" onclick="triggerShowMe()">✨ Show Me</button>
+        <button id="btn-stop-demo" class="btn btn-crimson" onclick="stopShowMe()" style="display:none;">⏹ Stop Demo</button>
+        <button class="btn" onclick="resetCamera()">🎥 Cam</button>
+        <button class="btn" onclick="toggleTopView()">⬇ Top</button>
+        <button class="btn btn-emerald" onclick="startFreshSingleOrReplay()">↻ New</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer id="credit-footer">Manish V. Shah, Vadodara, 94299 26447</footer>
+</div>
+
+<!-- GAME RULES MODAL -->
+<div id="modal-rules" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📖 Game Rules — How to Play</div>
+      <button class="modal-close" onclick="closeModal('modal-rules')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="rule-card">
+        <h4>🎯 Objective — Conquer the 6 Inner Demons</h4>
+        <p>The program places <strong>6 Symbolic Soldiers</strong> and <strong>1 Start Position</strong> (Golden Beacon) on the 3D chessboard. Conquer as many as possible in <strong>6 moves</strong>!</p>
+        <div class="legend-grid">
+          <div class="legend-item"><strong>💘 Lust:</strong> Rose Heart-Flame</div>
+          <div class="legend-item"><strong>💢 Anger:</strong> Scarlet Fury Spikes</div>
+          <div class="legend-item"><strong>💰 Greed:</strong> Gold Coin-Stack Gem</div>
+          <div class="legend-item"><strong>🎭 Deceit:</strong> Split Light/Dark Mask</div>
+          <div class="legend-item"><strong>👑 Ego:</strong> Tall Imperial Crown</div>
+          <div class="legend-item"><strong>🌀 Delusion:</strong> Orbiting Illusion Ring</div>
+        </div>
+      </div>
+      <div class="rule-card">
+        <h4>♟ Your 6 Elements (Use Each Once, Any Sequence)</h4>
+        <p>
+          <strong>🐪 2 Camels (Bishops):</strong> Move diagonally any number of clear squares.<br>
+          <strong>🐘 2 Elephants (Rooks):</strong> Move straight (horizontally/vertically) any number of clear squares.<br>
+          <strong>🐴 2 Horses (Knights):</strong> Move in an L-shape (2+1) and <strong>can jump over pieces</strong>!
+        </p>
+      </div>
+      <div class="rule-card">
+        <h4>📈 Difficulty & Game Over</h4>
+        <p>
+          • Levels progress automatically after each game: <strong>Easy → Medium → Difficult</strong>.<br>
+          • Game ends when all 6 Demons are conquered, all 6 moves are used, or <strong>no valid step remains</strong>.<br>
+          • <strong>Scoring:</strong> +100 pts per Demon conquered, plus +200 bonus for conquering all 6!
+        </p>
+      </div>
+      <div class="rule-card">
+        <h4>✨ Trick ("Show Me") & 3D Controls</h4>
+        <p>
+          • Click <strong>Show Me</strong> anytime to watch a slow 3D animation revealing how all 6 can be conquered!<br>
+          • <strong>3D Camera:</strong> Drag to rotate, scroll or pinch to zoom, tap/click a highlighted square (or Demon) to strike.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gold" onclick="closeModal('modal-rules')">Got It!</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETUP / MULTIPLAYER MODAL -->
+<div id="modal-setup" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🎮 Game Mode & Setup</div>
+      <button class="modal-close" onclick="closeModal('modal-setup')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Game Mode</label>
+        <div class="seg-row">
+          <button id="setup-single" class="seg-btn active" onclick="selectSetupMode('single')">👤 Single Player</button>
+          <button id="setup-multi" class="seg-btn" onclick="selectSetupMode('multi')">👥 Multiplayer</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Starting Difficulty</label>
+        <div class="seg-row">
+          <button class="seg-btn diff-opt active" data-diff="easy" onclick="selectSetupDiff('easy')">Easy</button>
+          <button class="seg-btn diff-opt" data-diff="medium" onclick="selectSetupDiff('medium')">Medium</button>
+          <button class="seg-btn diff-opt" data-diff="difficult" onclick="selectSetupDiff('difficult')">Difficult</button>
+        </div>
+      </div>
+
+      <div id="mp-setup-fields" style="display:none; flex-direction:column; gap:12px;">
+        <div class="form-group">
+          <label>Number of Players (Max 5)</label>
+          <div class="seg-row" id="mp-count-row">
+            <button class="seg-btn active" onclick="setPlayerCount(2)">2</button>
+            <button class="seg-btn" onclick="setPlayerCount(3)">3</button>
+            <button class="seg-btn" onclick="setPlayerCount(4)">4</button>
+            <button class="seg-btn" onclick="setPlayerCount(5)">5</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Number of Rounds (Max 5)</label>
+          <div class="seg-row" id="mp-rounds-row">
+            <button class="seg-btn" onclick="setRoundCount(1)">1</button>
+            <button class="seg-btn" onclick="setRoundCount(2)">2</button>
+            <button class="seg-btn active" onclick="setRoundCount(3)">3</button>
+            <button class="seg-btn" onclick="setRoundCount(4)">4</button>
+            <button class="seg-btn" onclick="setRoundCount(5)">5</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Player Names</label>
+          <div id="mp-names-container" class="player-names-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-setup')">Cancel</button>
+      <button class="btn btn-gold" onclick="applySetupAndStart()">🚀 Start Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- PASS DEVICE / TURN READY MODAL -->
+<div id="modal-turn-ready" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">🔄 Next Player Turn</div></div>
+    <div class="modal-body" style="text-align:center;">
+      <div style="font-size:0.9rem; color:var(--muted);" id="turn-ready-round">Round 1 of 3 • Easy</div>
+      <div style="font-size:1.7rem; font-weight:900; color:var(--gold); margin:6px 0;" id="turn-ready-name">Player 1</div>
+      <p style="margin:0; color:#cfd8ec;">Pass the device to this player. Timer begins when you press Start Turn!</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center;">
+      <button class="btn btn-emerald" style="padding:10px 24px; font-size:1rem;" onclick="beginMultiplayerTurn()">▶ Start Turn</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME OVER / FINAL SCOREBOARD MODAL -->
+<div id="modal-gameover" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="go-title">🏁 Game Over — Final Score Board</div>
+      <button class="modal-close" onclick="closeModal('modal-gameover')">&times;</button>
+    </div>
+    <div class="modal-body" id="go-body"></div>
+    <div class="modal-footer" id="go-footer"></div>
+  </div>
+</div>
+
+<script>
+/* 1. AUDIO SYNTHESIZER */
+let soundEnabled = true;
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  return audioCtx;
+}
+function playTone(freq, dur, type = 'sine', vol = 0.12, delay = 0) {
+  if (!soundEnabled) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+  gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
+  gain.gain.exponentialRampToValueAtTime(vol, ctx.currentTime + delay + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(ctx.currentTime + delay);
+  osc.stop(ctx.currentTime + delay + dur + 0.02);
+}
+function sfxSelect() { playTone(520, 0.08, 'triangle', 0.08); }
+function sfxMove() { playTone(210, 0.11, 'sine', 0.11); playTone(160, 0.09, 'triangle', 0.08, 0.04); }
+function sfxCapture() { playTone(440, 0.12, 'triangle', 0.14); playTone(660, 0.16, 'sine', 0.13, 0.06); playTone(880, 0.2, 'sine', 0.1, 0.12); }
+function sfxWin() { [523, 659, 784, 1046].forEach((f, i) => playTone(f, 0.24, 'triangle', 0.13, i * 0.09)); }
+function sfxEnd() { [392, 349, 330].forEach((f, i) => playTone(f, 0.22, 'sine', 0.1, i * 0.1)); }
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  document.getElementById('btn-sound').textContent = soundEnabled ? '🔊' : '🔇';
+}
+
+/* 2. SYMBOLIC SOLDIERS & SOLVABLE PUZZLE GENERATOR */
+const DIFF_ORDER = ['easy', 'medium', 'difficult'];
+const PIECE_META = {
+  camel:    { label: 'Camel',    sub: 'Bishop', icon: '🐪' },
+  elephant: { label: 'Elephant', sub: 'Rook',   icon: '🐘' },
+  horse:    { label: 'Horse',    sub: 'Knight', icon: '🐴' }
+};
+const ENEMY_TYPES = [
+  { key: 'lust',     name: 'Lust',     icon: '💘', colorHex: 0xec4899, cssColor: '#f472b6', accentHex: 0xfde047 },
+  { key: 'anger',    name: 'Anger',    icon: '💢', colorHex: 0xef4444, cssColor: '#f87171', accentHex: 0xfb923c },
+  { key: 'greed',    name: 'Greed',    icon: '💰', colorHex: 0xd97706, cssColor: '#fbbf24', accentHex: 0xfef08a },
+  { key: 'deceit',   name: 'Deceit',   icon: '🎭', colorHex: 0x8b5cf6, cssColor: '#a78bfa', accentHex: 0x1e293b },
+  { key: 'ego',      name: 'Ego',      icon: '👑', colorHex: 0x3b82f6, cssColor: '#60a5fa', accentHex: 0xe2e8f0 },
+  { key: 'delusion', name: 'Delusion', icon: '🌀', colorHex: 0x14b8a6, cssColor: '#2dd4bf', accentHex: 0xa5f3fc }
+];
+
+function sqKey(r, c) { return `${r},${c}`; }
+function sqName(r, c) { return 'ABCDEFGH'[c] + (8 - r); }
+function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 8; }
+
+function getLegalMoves(r, c, pieceType, soldierKeySet) {
+  const moves = [];
+  if (pieceType === 'horse') {
+    const jumps = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+    for (const [dr, dc] of jumps) {
+      const nr = r + dr, nc = c + dc;
+      if (inBounds(nr, nc)) moves.push({ r: nr, c: nc });
+    }
+  } else {
+    const dirs = pieceType === 'camel' ? [[-1,-1],[-1,1],[1,-1],[1,1]] : [[-1,0],[1,0],[0,-1],[0,1]];
+    for (const [dr, dc] of dirs) {
+      let nr = r + dr, nc = c + dc;
+      while (inBounds(nr, nc)) {
+        moves.push({ r: nr, c: nc });
+        if (soldierKeySet.has(sqKey(nr, nc))) break;
+        nr += dr; nc += dc;
+      }
+    }
+  }
+  return moves;
+}
+
+function getRayIntermediates(r1, c1, r2, c2) {
+  const dr = Math.sign(r2 - r1), dc = Math.sign(c2 - c1), list = [];
+  let r = r1 + dr, c = c1 + dc;
+  while (r !== r2 || c !== c2) { list.push(sqKey(r, c)); r += dr; c += dc; }
+  return list;
+}
+
+function shuffleArr(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generatePuzzle(difficulty) {
+  const candidates = [];
+  let attempts = 0;
+  while (candidates.length < 28 && attempts < 600) {
+    attempts++;
+    const startR = difficulty === 'easy' ? (1 + Math.floor(Math.random() * 6)) : Math.floor(Math.random() * 8);
+    const startC = difficulty === 'easy' ? (1 + Math.floor(Math.random() * 6)) : Math.floor(Math.random() * 8);
+    const startPos = { r: startR, c: startC };
+    const seq = shuffleArr(['camel', 'camel', 'elephant', 'elephant', 'horse', 'horse']);
+    const enemyOrder = shuffleArr(ENEMY_TYPES);
+    const visited = new Set([sqKey(startR, startC)]);
+    const forbiddenFuture = new Set();
+    const soldiers = [], solution = [], stepIntermediates = [];
+    let cur = startPos, ok = true, totalDist = 0;
+
+    for (let i = 0; i < 6; i++) {
+      const piece = seq[i];
+      const validTargets = getLegalMoves(cur.r, cur.c, piece, new Set()).filter(m => {
+        const k = sqKey(m.r, m.c);
+        return !visited.has(k) && !forbiddenFuture.has(k);
+      });
+      if (validTargets.length === 0) { ok = false; break; }
+
+      let pool = validTargets;
+      if (difficulty === 'easy') {
+        const p = validTargets.filter(m => Math.abs(m.r - cur.r) + Math.abs(m.c - cur.c) <= 4);
+        if (p.length) pool = p;
+      } else if (difficulty === 'difficult') {
+        const p = validTargets.filter(m => Math.abs(m.r - cur.r) + Math.abs(m.c - cur.c) >= 3);
+        if (p.length) pool = p;
+      }
+
+      const next = pool[Math.floor(Math.random() * pool.length)];
+      totalDist += Math.abs(next.r - cur.r) + Math.abs(next.c - cur.c);
+      let inter = [];
+      if (piece === 'camel' || piece === 'elephant') {
+        inter = getRayIntermediates(cur.r, cur.c, next.r, next.c);
+        inter.forEach(k => forbiddenFuture.add(k));
+      }
+      stepIntermediates.push(inter);
+      visited.add(sqKey(next.r, next.c));
+
+      const enemy = enemyOrder[i];
+      soldiers.push({
+        id: i, r: next.r, c: next.c, alive: true,
+        enemyKey: enemy.key, name: enemy.name, icon: enemy.icon,
+        colorHex: enemy.colorHex, cssColor: enemy.cssColor, accentHex: enemy.accentHex
+      });
+      solution.push({ piece, from: { ...cur }, to: { ...next }, soldierId: i, enemyName: enemy.name, enemyIcon: enemy.icon });
+      cur = next;
+    }
+    if (!ok) continue;
+
+    let depCount = 0;
+    for (let i = 0; i < 6; i++) {
+      const interSet = new Set(stepIntermediates[i]);
+      for (let k = 0; k < i; k++) if (interSet.has(sqKey(soldiers[k].r, soldiers[k].c))) depCount++;
+    }
+    let fitness = difficulty === 'easy'
+      ? (depCount === 0 ? 50 : -depCount * 20) - totalDist
+      : difficulty === 'medium'
+        ? (depCount === 1 ? 40 : depCount === 0 ? 15 : 10) - Math.abs(totalDist - 22) * 2
+        : depCount * 45 + totalDist * 2;
+    candidates.push({ startPos, soldiers, solution, fitness });
+  }
+  candidates.sort((a, b) => b.fitness - a.fitness);
+  return { difficulty, startPos: candidates[0].startPos, soldiers: candidates[0].soldiers, solution: candidates[0].solution };
+}
+
+/* 3. THREE.JS 3D SCENE */
+let scene, camera, renderer, boardGroup, piecesGroup, highlightsGroup, particlesGroup;
+let tileMeshes = [], highlightMeshes = [], soldierMeshes = new Map(), playerMesh = null;
+let raycaster = new THREE.Raycaster(), activeAnimations = [], particleList = [];
+const camState = { theta: 0, phi: 0.78, radius: 12.2, targetTheta: 0, targetPhi: 0.78, targetRadius: 12.2 };
+
+function tileToWorld(r, c) { return { x: c - 3.5, z: r - 3.5 }; }
+
+function makeWoodFrameTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024; canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#3b2314'; ctx.fillRect(0, 0, 1024, 1024);
+  ctx.strokeStyle = 'rgba(20,10,5,0.25)'; ctx.lineWidth = 3;
+  for (let i = 0; i < 120; i++) {
+    ctx.beginPath(); const y = Math.random() * 1024; ctx.moveTo(0, y);
+    ctx.bezierCurveTo(300, y + (Math.random() - 0.5) * 16, 700, y + (Math.random() - 0.5) * 16, 1024, y);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = '#d4a13e'; ctx.lineWidth = 6; ctx.strokeRect(56, 56, 912, 912);
+  ctx.fillStyle = '#f1cb7a'; ctx.font = 'bold 30px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const files = 'ABCDEFGH', tilePx = 880 / 8;
+  for (let i = 0; i < 8; i++) {
+    const pos = 72 + tilePx * (i + 0.5);
+    ctx.fillText(files[i], pos, 990); ctx.fillText(files[i], pos, 32);
+    ctx.fillText(String(8 - i), 30, pos); ctx.fillText(String(8 - i), 994, pos);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function createEnemyLabelSprite(text, borderCssColor) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 76;
+  const ctx = canvas.getContext('2d'), r = 22;
+  ctx.fillStyle = 'rgba(13, 18, 32, 0.88)';
+  ctx.strokeStyle = borderCssColor; ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(r + 6, 8); ctx.lineTo(250 - r, 8);
+  ctx.quadraticCurveTo(250, 8, 250, 8 + r); ctx.lineTo(250, 68 - r);
+  ctx.quadraticCurveTo(250, 68, 250 - r, 68); ctx.lineTo(r + 6, 68);
+  ctx.quadraticCurveTo(6, 68, 6, 68 - r); ctx.lineTo(6, 8 + r);
+  ctx.quadraticCurveTo(6, 8, r + 6, 8); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 34px Segoe UI, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 128, 39);
+  const tex = new THREE.CanvasTexture(canvas);
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sprite.scale.set(1.12, 0.34, 1);
+  return sprite;
+}
+
+function createSymbolicSoldierMesh(soldierData) {
+  const group = new THREE.Group();
+  const mainMat = new THREE.MeshStandardMaterial({ color: soldierData.colorHex, roughness: 0.28, metalness: 0.20 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: soldierData.accentHex, roughness: 0.22, metalness: 0.55 });
+  const addLathe = (pts, material = mainMat, segs = 24) => {
+    const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), segs), material);
+    m.castShadow = true; m.receiveShadow = true; group.add(m); return m;
+  };
+  let labelY = 1.24;
+  const key = soldierData.enemyKey;
+
+  if (key === 'lust') {
+    addLathe([[0,0],[0.31,0],[0.32,0.07],[0.24,0.14],[0.15,0.34],[0.11,0.54],[0.17,0.60],[0,0.60]]);
+    const l1 = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 14), mainMat); l1.position.set(-0.085, 0.80, 0); l1.castShadow = true;
+    const l2 = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 14), mainMat); l2.position.set(0.085, 0.80, 0); l2.castShadow = true;
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.24, 16), mainMat); tip.position.set(0, 0.68, 0); tip.rotation.x = Math.PI; tip.castShadow = true;
+    const flame = new THREE.Mesh(new THREE.OctahedronGeometry(0.09, 0), accentMat); flame.position.set(0, 0.96, 0);
+    group.add(l1, l2, tip, flame);
+  } else if (key === 'anger') {
+    addLathe([[0,0],[0.34,0],[0.35,0.08],[0.27,0.16],[0.21,0.36],[0.19,0.54],[0.24,0.60],[0,0.60]]);
+    const core = new THREE.Mesh(new THREE.DodecahedronGeometry(0.17, 0), mainMat); core.position.y = 0.72; core.castShadow = true; group.add(core);
+    const sp = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.36, 10), accentMat); sp.position.y = 0.96; sp.castShadow = true; group.add(sp);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.4;
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.28, 8), accentMat);
+      horn.position.set(Math.cos(a) * 0.16, 0.86, Math.sin(a) * 0.16);
+      horn.rotation.z = -Math.cos(a) * 0.55; horn.rotation.x = Math.sin(a) * 0.55; horn.castShadow = true; group.add(horn);
+    }
+  } else if (key === 'greed') {
+    for (let i = 0; i < 5; i++) {
+      const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.28 - i * 0.025, 0.28 - i * 0.025, 0.09, 20), i % 2 === 0 ? mainMat : accentMat);
+      coin.position.y = 0.05 + i * 0.105; coin.castShadow = true; coin.receiveShadow = true; group.add(coin);
+    }
+    const cup = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.032, 10, 20), mainMat); cup.rotation.x = Math.PI / 2; cup.position.y = 0.62; group.add(cup);
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.21, 0), new THREE.MeshStandardMaterial({ color: 0xfef08a, emissive: 0xd97706, emissiveIntensity: 0.35, roughness: 0.1, metalness: 0.5 }));
+    gem.position.y = 0.82; gem.castShadow = true; gem.name = 'greed-gem'; group.add(gem);
+  } else if (key === 'deceit') {
+    addLathe([[0,0],[0.31,0],[0.32,0.07],[0.24,0.14],[0.15,0.40],[0.13,0.56],[0,0.56]]);
+    const lh = new THREE.Mesh(new THREE.SphereGeometry(0.19, 18, 16, 0, Math.PI), mainMat); lh.position.y = 0.78; lh.castShadow = true;
+    const rh = new THREE.Mesh(new THREE.SphereGeometry(0.19, 18, 16, Math.PI, Math.PI), accentMat); rh.position.y = 0.78; rh.castShadow = true;
+    const tr = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.025, 8, 24), mainMat); tr.position.y = 0.78; tr.rotation.set(0.7, 0.5, 0);
+    group.add(lh, rh, tr);
+  } else if (key === 'ego') {
+    addLathe([[0,0],[0.33,0],[0.34,0.08],[0.26,0.16],[0.19,0.50],[0.17,0.82],[0.24,0.92],[0,0.92]]);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.19, 0.16, 16), accentMat); band.position.y = 0.96; band.castShadow = true; group.add(band);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const spire = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.24, 8), accentMat);
+      spire.position.set(Math.cos(a) * 0.18, 1.12, Math.sin(a) * 0.18); spire.castShadow = true; group.add(spire);
+    }
+    const peak = new THREE.Mesh(new THREE.SphereGeometry(0.09, 14, 12), mainMat); peak.position.y = 1.10; group.add(peak);
+    labelY = 1.44;
+  } else {
+    addLathe([[0,0],[0.31,0],[0.32,0.07],[0.24,0.14],[0.15,0.36],[0.12,0.52],[0,0.52]]);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 18), mainMat); orb.position.y = 0.78; orb.castShadow = true; group.add(orb);
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.03, 10, 28), accentMat);
+    ring1.position.y = 0.78; ring1.rotation.set(1.05, 0.3, 0); ring1.name = 'delusion-ring'; group.add(ring1);
+  }
+
+  const label = createEnemyLabelSprite(soldierData.name, soldierData.cssColor);
+  label.position.set(0, labelY, 0); group.add(label);
+  return group;
+}
+
+function createPieceMesh(type, colorHex, accentHex) {
+  const group = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.28, metalness: 0.14 });
+  const accentMat = new THREE.MeshStandardMaterial({ color: accentHex, roughness: 0.25, metalness: 0.65 });
+  const addLathe = (pts, material = mat, segs = 24) => {
+    const m = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([x, y]) => new THREE.Vector2(x, y)), segs), material);
+    m.castShadow = true; m.receiveShadow = true; group.add(m); return m;
+  };
+
+  if (type === 'beacon') {
+    addLathe([[0,0],[0.36,0],[0.38,0.06],[0.30,0.12],[0.24,0.16],[0,0.16]], accentMat);
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0ea5e9, emissiveIntensity: 0.45, roughness: 0.15, metalness: 0.3 }));
+    gem.position.y = 0.45; gem.castShadow = true; gem.name = 'beacon-gem'; group.add(gem);
+  } else if (type === 'camel') {
+    addLathe([[0,0],[0.34,0],[0.35,0.08],[0.27,0.15],[0.23,0.22],[0.15,0.46],[0.12,0.66],[0.21,0.72],[0.19,0.76],[0.12,0.78],[0.18,0.94],[0.14,1.12],[0.05,1.22],[0,1.24]]);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.035, 10, 22), accentMat); ring.rotation.x = Math.PI / 2; ring.position.y = 0.74; group.add(ring);
+    const fin = new THREE.Mesh(new THREE.SphereGeometry(0.065, 14, 12), accentMat); fin.position.y = 1.28; fin.castShadow = true; group.add(fin);
+  } else if (type === 'elephant') {
+    addLathe([[0,0],[0.35,0],[0.36,0.08],[0.28,0.16],[0.24,0.24],[0.20,0.55],[0.19,0.78],[0.27,0.86],[0.27,0.98],[0.19,0.98],[0.19,0.90],[0,0.90]]);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.032, 10, 24), accentMat); band.rotation.x = Math.PI / 2; band.position.y = 0.82; group.add(band);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const mer = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.14, 0.09), mat);
+      mer.position.set(Math.cos(a) * 0.22, 1.04, Math.sin(a) * 0.22); mer.rotation.y = -a; mer.castShadow = true; group.add(mer);
+    }
+  } else if (type === 'horse') {
+    addLathe([[0,0],[0.35,0],[0.36,0.08],[0.28,0.16],[0.24,0.24],[0.20,0.36],[0,0.36]]);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.032, 10, 22), accentMat); ring.rotation.x = Math.PI / 2; ring.position.y = 0.35; group.add(ring);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.20, 0.52, 16), mat); neck.position.set(0, 0.58, 0.04); neck.rotation.x = -0.28; neck.castShadow = true; group.add(neck);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.22, 0.42), mat); head.position.set(0, 0.85, -0.10); head.rotation.x = 0.35; head.castShadow = true; group.add(head);
+    const muz = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.10, 0.20, 12), mat); muz.position.set(0, 0.78, -0.28); muz.rotation.x = Math.PI / 2 + 0.35; muz.castShadow = true; group.add(muz);
+    const mane = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.44, 0.12), accentMat); mane.position.set(0, 0.68, 0.14); mane.rotation.x = -0.25; group.add(mane);
+    [-0.065, 0.065].forEach(ex => {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.14, 8), mat);
+      ear.position.set(ex, 1.02, 0.02); ear.rotation.x = -0.15; ear.castShadow = true; group.add(ear);
+    });
+  }
+  return group;
+}
+
+function initThreeScene() {
+  const container = document.getElementById('board-container');
+  scene = new THREE.Scene(); scene.background = new THREE.Color(0x0c111d);
+  const w = container.clientWidth || 600, h = container.clientHeight || 500;
+  camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 100);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(w, h); renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.innerHTML = ''; container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.HemisphereLight(0xfff5e4, 0x1e273d, 0.78));
+  const dir = new THREE.DirectionalLight(0xfff6e5, 1.05);
+  dir.position.set(7, 13, 8); dir.castShadow = true; dir.shadow.mapSize.set(2048, 2048);
+  dir.shadow.camera.near = 2; dir.shadow.camera.far = 30;
+  dir.shadow.camera.left = -6.5; dir.shadow.camera.right = 6.5;
+  dir.shadow.camera.top = 6.5; dir.shadow.camera.bottom = -6.5; dir.shadow.bias = -0.0005;
+  scene.add(dir);
+  const rim = new THREE.PointLight(0x60a5fa, 0.45, 22); rim.position.set(-7, 6, -7); scene.add(rim);
+
+  boardGroup = new THREE.Group(); piecesGroup = new THREE.Group();
+  highlightsGroup = new THREE.Group(); particlesGroup = new THREE.Group();
+  scene.add(boardGroup, piecesGroup, highlightsGroup, particlesGroup);
+
+  const frameMat = new THREE.MeshStandardMaterial({ map: makeWoodFrameTexture(), roughness: 0.45, metalness: 0.1 });
+  const sideMat = new THREE.MeshStandardMaterial({ color: 0x2c190d, roughness: 0.55 });
+  const frameMesh = new THREE.Mesh(new THREE.BoxGeometry(9.3, 0.42, 9.3), [sideMat, sideMat, frameMat, sideMat, sideMat, sideMat]);
+  frameMesh.position.y = -0.21; frameMesh.receiveShadow = true; boardGroup.add(frameMesh);
+
+  const lightTileMat = new THREE.MeshStandardMaterial({ color: 0xead7b7, roughness: 0.38, metalness: 0.04 });
+  const darkTileMat = new THREE.MeshStandardMaterial({ color: 0x623d23, roughness: 0.42, metalness: 0.05 });
+  const tileGeo = new THREE.BoxGeometry(1, 0.10, 1);
+
+  tileMeshes = Array.from({ length: 8 }, () => Array(8));
+  highlightMeshes = Array.from({ length: 8 }, () => Array(8));
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const { x, z } = tileToWorld(r, c);
+      const tile = new THREE.Mesh(tileGeo, (r + c) % 2 === 0 ? lightTileMat : darkTileMat);
+      tile.position.set(x, 0.05, z); tile.receiveShadow = true; tile.userData = { r, c };
+      boardGroup.add(tile); tileMeshes[r][c] = tile;
+
+      const hlGroup = new THREE.Group(); hlGroup.position.set(x, 0.11, z); hlGroup.visible = false;
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.38, 28), new THREE.MeshBasicMaterial({ color: 0x2fd68d, transparent: true, opacity: 0.38, side: THREE.DoubleSide }));
+      disc.rotation.x = -Math.PI / 2; disc.name = 'disc';
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.45, 32), new THREE.MeshBasicMaterial({ color: 0x2fd68d, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.005; ring.name = 'ring';
+      hlGroup.add(disc, ring); highlightsGroup.add(hlGroup); highlightMeshes[r][c] = hlGroup;
+    }
+  }
+
+  setupBoardPointerEvents();
+  setupResizeObserver();
+  updateCameraPosition();
+  animateLoop();
+}
+
+function updateCameraPosition() {
+  camState.theta += (camState.targetTheta - camState.theta) * 0.14;
+  camState.phi += (camState.targetPhi - camState.phi) * 0.14;
+  camState.radius += (camState.targetRadius - camState.radius) * 0.14;
+  const sinPhi = Math.sin(camState.phi);
+  camera.position.set(
+    camState.radius * sinPhi * Math.sin(camState.theta),
+    camState.radius * Math.cos(camState.phi),
+    camState.radius * sinPhi * Math.cos(camState.theta)
+  );
+  camera.lookAt(0, 0.15, 0);
+}
+
+function resetCamera() {
+  camState.targetTheta = 0; camState.targetPhi = 0.78;
+  camState.targetRadius = layoutMode === 'mobile' ? 14.5 : 12.2;
+}
+function toggleTopView() {
+  if (camState.targetPhi < 0.25) resetCamera();
+  else { camState.targetTheta = 0; camState.targetPhi = 0.08; camState.targetRadius = layoutMode === 'mobile' ? 15.2 : 12.8; }
+}
+
+function setupResizeObserver() {
+  const container = document.getElementById('board-container');
+  const resize = () => {
+    if (!renderer || !camera) return;
+    const w = container.clientWidth, h = container.clientHeight;
+    if (w <= 0 || h <= 0) return;
+    camera.aspect = w / h; camera.updateProjectionMatrix(); renderer.setSize(w, h);
+  };
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(container);
+  window.addEventListener('resize', resize);
+}
+
+function setupBoardPointerEvents() {
+  const el = renderer.domElement;
+  const activePointers = new Map();
+  let dragStart = null, totalTravel = 0, lastPinchDist = null;
+
+  el.addEventListener('pointerdown', (e) => {
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePointers.size === 1) { dragStart = { x: e.clientX, y: e.clientY }; totalTravel = 0; }
+    else if (activePointers.size === 2) {
+      const pts = Array.from(activePointers.values());
+      lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    }
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!activePointers.has(e.pointerId)) return;
+    const prev = activePointers.get(e.pointerId);
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (activePointers.size === 1 && dragStart) {
+      const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+      totalTravel += Math.hypot(dx, dy);
+      if (totalTravel > 6) {
+        camState.targetTheta -= dx * 0.007;
+        camState.targetPhi = Math.max(0.08, Math.min(1.28, camState.targetPhi - dy * 0.006));
+      }
+    } else if (activePointers.size === 2) {
+      const pts = Array.from(activePointers.values());
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (lastPinchDist != null) camState.targetRadius = Math.max(7.5, Math.min(22, camState.targetRadius + (lastPinchDist - dist) * 0.03));
+      lastPinchDist = dist;
+    }
+  });
+  const endPointer = (e) => {
+    if (activePointers.size === 1 && totalTravel < 9 && dragStart) handleBoardTap(e.clientX, e.clientY);
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) lastPinchDist = null;
+    if (activePointers.size === 0) dragStart = null;
+  };
+  el.addEventListener('pointerup', endPointer);
+  el.addEventListener('pointercancel', (e) => { activePointers.delete(e.pointerId); lastPinchDist = null; });
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    camState.targetRadius = Math.max(7.5, Math.min(22, camState.targetRadius + e.deltaY * 0.008));
+  }, { passive: false });
+}
+
+function handleBoardTap(clientX, clientY) {
+  if (game.isAnimating || game.isDemo || game.isOver) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+
+  const targets = [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) targets.push(tileMeshes[r][c]);
+  soldierMeshes.forEach(mesh => mesh.traverse(child => {
+    if (child.isMesh) { child.userData.soldierRef = mesh.userData.soldierRef; targets.push(child); }
+  }));
+
+  const hits = raycaster.intersectObjects(targets, false);
+  if (!hits.length) return;
+  const hitObj = hits[0].object;
+  if (hitObj.userData.r !== undefined) onBoardSquareClicked(hitObj.userData.r, hitObj.userData.c);
+  else if (hitObj.userData.soldierRef) onBoardSquareClicked(hitObj.userData.soldierRef.r, hitObj.userData.soldierRef.c);
+}
+
+function spawnCaptureParticles(worldX, worldZ, customColorHex = 0xf5b942) {
+  const colors = [customColorHex, 0xf5b942, 0xffffff, 0x2fd68d];
+  for (let i = 0; i < 20; i++) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.09), new THREE.MeshBasicMaterial({ color: colors[i % colors.length] }));
+    p.position.set(worldX, 0.55, worldZ);
+    const angle = Math.random() * Math.PI * 2, speed = 1.5 + Math.random() * 2.5;
+    particlesGroup.add(p);
+    particleList.push({ mesh: p, vx: Math.cos(angle) * speed, vy: 2.5 + Math.random() * 3.0, vz: Math.sin(angle) * speed, life: 0.75 });
+  }
+}
+
+function animateLoop() {
+  requestAnimationFrame(animateLoop);
+  const dt = 0.016, now = performance.now() * 0.001;
+  updateCameraPosition();
+
+  if (playerMesh && !game.isAnimating) {
+    const gem = playerMesh.getObjectByName('beacon-gem');
+    if (gem) { gem.rotation.y += 0.03; gem.position.y = 0.45 + Math.sin(now * 3) * 0.05; }
+  }
+  soldierMeshes.forEach(m => {
+    const dRing = m.getObjectByName('delusion-ring'); if (dRing) dRing.rotation.z += 0.03;
+    const gGem = m.getObjectByName('greed-gem'); if (gGem) gGem.rotation.y += 0.025;
+  });
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const hl = highlightMeshes[r][c];
+      if (hl.visible) hl.scale.set(0.94 + Math.sin(now * 5) * 0.06, 1, 0.94 + Math.sin(now * 5) * 0.06);
+    }
+  }
+  for (let i = activeAnimations.length - 1; i >= 0; i--) {
+    const anim = activeAnimations[i];
+    anim.elapsed += dt;
+    const t = Math.min(1, anim.elapsed / anim.duration);
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    if (anim.type === 'move') {
+      anim.mesh.position.set(
+        anim.fromX + (anim.toX - anim.fromX) * ease,
+        0.10 + (anim.jump ? Math.sin(t * Math.PI) * 1.35 : 0),
+        anim.fromZ + (anim.toZ - anim.fromZ) * ease
+      );
+    } else if (anim.type === 'knockoff') {
+      anim.mesh.position.y += dt * 4.5; anim.mesh.position.x += anim.vx * dt; anim.mesh.position.z += anim.vz * dt;
+      anim.mesh.rotation.x += dt * 9; anim.mesh.rotation.z += dt * 7; anim.mesh.scale.setScalar(Math.max(0.01, 1 - t));
+    }
+    if (t >= 1) { if (anim.onDone) anim.onDone(); activeAnimations.splice(i, 1); }
+  }
+  for (let i = particleList.length - 1; i >= 0; i--) {
+    const p = particleList[i];
+    p.life -= dt; p.vy -= 9.5 * dt;
+    p.mesh.position.x += p.vx * dt; p.mesh.position.y += p.vy * dt; p.mesh.position.z += p.vz * dt;
+    p.mesh.rotation.x += 0.15; p.mesh.rotation.y += 0.15; p.mesh.scale.setScalar(Math.max(0.01, p.life * 1.3));
+    if (p.life <= 0) { particlesGroup.remove(p.mesh); particleList.splice(i, 1); }
+  }
+  renderer.render(scene, camera);
+}
+
+/* 4. GAME STATE & MULTIPLAYER */
+let layoutMode = 'desktop', currentDifficulty = 'easy';
+const game = {
+  puzzle: null, playerPos: { r: 0, c: 0 }, soldiers: [], inventory: [],
+  selectedPieceIdx: null, validMoves: [], capturedCount: 0, score: 0, movesUsed: 0,
+  startTimeMs: 0, elapsedMs: 0, timerInterval: null, isAnimating: false, isDemo: false, demoCancel: false, isOver: false
+};
+const mp = {
+  active: false, playerCount: 2, roundCount: 3,
+  names: ['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5'],
+  currentRound: 1, currentPlayerIdx: 0, stats: [], waitingForTurnStart: false
+};
+let setupConfig = { mode: 'single', difficulty: 'easy', playerCount: 2, roundCount: 3 };
+
+function setLayoutMode(mode) {
+  layoutMode = mode;
+  document.body.classList.remove('mode-desktop', 'mode-mobile');
+  document.body.classList.add(mode === 'mobile' ? 'mode-mobile' : 'mode-desktop');
+  document.getElementById('btn-mode-desktop').classList.toggle('active', mode === 'desktop');
+  document.getElementById('btn-mode-mobile').classList.toggle('active', mode === 'mobile');
+  resetCamera();
+}
+
+function buildFreshInventory() {
+  return [
+    { id: 0, type: 'camel', used: false }, { id: 1, type: 'camel', used: false },
+    { id: 2, type: 'elephant', used: false }, { id: 3, type: 'elephant', used: false },
+    { id: 4, type: 'horse', used: false }, { id: 5, type: 'horse', used: false }
+  ];
+}
+
+function startPuzzle(puzzle, autoStartTimer = true) {
+  stopTimer();
+  game.demoCancel = true; game.isDemo = false; game.isAnimating = false; game.isOver = false;
+  game.puzzle = puzzle; game.playerPos = { ...puzzle.startPos };
+  game.soldiers = puzzle.soldiers.map(s => ({ ...s, alive: true }));
+  game.inventory = buildFreshInventory();
+  game.selectedPieceIdx = null; game.validMoves = [];
+  game.capturedCount = 0; game.score = 0; game.movesUsed = 0; game.elapsedMs = 0;
+
+  document.getElementById('btn-show-me').style.display = '';
+  document.getElementById('btn-stop-demo').style.display = 'none';
+
+  rebuild3DPieces(); clearHighlights(); updateDifficultyBadge();
+  renderEnemiesStrip(); renderPieceTray(); updateHUD();
+  setStatusBanner(`Start at ${sqName(game.playerPos.r, game.playerPos.c)}. Pick a piece to conquer Lust, Anger, Greed, Deceit, Ego & Delusion!`);
+  if (autoStartTimer) startTimer();
+}
+
+function rebuild3DPieces() {
+  while (piecesGroup.children.length) piecesGroup.remove(piecesGroup.children[0]);
+  soldierMeshes.clear();
+  game.soldiers.forEach(s => {
+    if (!s.alive) return;
+    const m = createSymbolicSoldierMesh(s);
+    const { x, z } = tileToWorld(s.r, s.c);
+    m.position.set(x, 0.10, z); m.userData.soldierRef = s;
+    piecesGroup.add(m); soldierMeshes.set(s.id, m);
+  });
+  renderPlayerPieceMesh();
+}
+
+function renderPlayerPieceMesh() {
+  if (playerMesh) piecesGroup.remove(playerMesh);
+  const type = game.selectedPieceIdx !== null ? game.inventory[game.selectedPieceIdx].type : 'beacon';
+  playerMesh = createPieceMesh(type, 0xf6eedc, 0x2fd68d);
+  const { x, z } = tileToWorld(game.playerPos.r, game.playerPos.c);
+  playerMesh.position.set(x, 0.10, z);
+  piecesGroup.add(playerMesh);
+}
+
+function clearHighlights() {
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) highlightMeshes[r][c].visible = false;
+}
+
+function showHighlights() {
+  clearHighlights();
+  const curHl = highlightMeshes[game.playerPos.r][game.playerPos.c];
+  setHlColor(curHl, 0xf5b942, 0.25); curHl.visible = true;
+  const aliveKeys = new Set(game.soldiers.filter(s => s.alive).map(s => sqKey(s.r, s.c)));
+  game.validMoves.forEach(m => {
+    const hl = highlightMeshes[m.r][m.c];
+    const isCap = aliveKeys.has(sqKey(m.r, m.c));
+    setHlColor(hl, isCap ? 0xef4d5e : 0x2fd68d, isCap ? 0.52 : 0.34);
+    hl.visible = true;
+  });
+}
+
+function setHlColor(hlGroup, hex, opacity) {
+  hlGroup.getObjectByName('disc').material.color.setHex(hex);
+  hlGroup.getObjectByName('disc').material.opacity = opacity;
+  hlGroup.getObjectByName('ring').material.color.setHex(hex);
+}
+
+function selectInventoryPiece(idx) {
+  if (game.isAnimating || game.isDemo || game.isOver || mp.waitingForTurnStart) return;
+  const item = game.inventory[idx];
+  if (!item || item.used) return;
+  sfxSelect();
+  game.selectedPieceIdx = idx;
+  const aliveSet = new Set(game.soldiers.filter(s => s.alive).map(s => sqKey(s.r, s.c)));
+  game.validMoves = getLegalMoves(game.playerPos.r, game.playerPos.c, item.type, aliveSet);
+  renderPlayerPieceMesh(); showHighlights(); renderPieceTray();
+  const meta = PIECE_META[item.type];
+  setStatusBanner(game.validMoves.length === 0
+    ? `${meta.icon} ${meta.label} has no moves from ${sqName(game.playerPos.r, game.playerPos.c)}. Try another piece!`
+    : `${meta.icon} ${meta.label} selected! Tap a green square or red target Demon.`);
+}
+
+function onBoardSquareClicked(r, c) {
+  if (game.selectedPieceIdx === null) { setStatusBanner('Please select one of your 6 pieces first!'); return; }
+  if (!game.validMoves.some(m => m.r === r && m.c === c)) return;
+  executePlayerMove(game.selectedPieceIdx, r, c);
+}
+
+function executePlayerMove(pieceIdx, targetR, targetC) {
+  const item = game.inventory[pieceIdx];
+  const from = { ...game.playerPos }, to = { r: targetR, c: targetC };
+  const captured = game.soldiers.find(s => s.alive && s.r === targetR && s.c === targetC);
+  game.isAnimating = true; clearHighlights();
+
+  animate3DMove(from, to, item.type, captured, () => {
+    item.used = true; game.playerPos = to; game.movesUsed++;
+    game.selectedPieceIdx = null; game.validMoves = [];
+    if (captured) {
+      captured.alive = false; game.capturedCount++; game.score += 100;
+      if (game.capturedCount === 6) game.score += 200;
+    }
+    game.isAnimating = false;
+    renderPlayerPieceMesh(); renderEnemiesStrip(); renderPieceTray(); updateHUD();
+    checkEndConditions(captured);
+  });
+}
+
+function animate3DMove(from, to, pieceType, capturedSoldier, callback) {
+  const fromW = tileToWorld(from.r, from.c), toW = tileToWorld(to.r, to.c);
+  const jump = pieceType === 'horse';
+  sfxMove();
+  activeAnimations.push({
+    type: 'move', mesh: playerMesh, fromX: fromW.x, fromZ: fromW.z, toX: toW.x, toZ: toW.z,
+    jump, elapsed: 0, duration: jump ? 0.52 : 0.42,
+    onDone: () => {
+      if (capturedSoldier) {
+        sfxCapture(); spawnCaptureParticles(toW.x, toW.z, capturedSoldier.colorHex);
+        const sMesh = soldierMeshes.get(capturedSoldier.id);
+        if (sMesh) {
+          soldierMeshes.delete(capturedSoldier.id);
+          activeAnimations.push({
+            type: 'knockoff', mesh: sMesh, vx: (Math.random() - 0.5) * 5, vz: (Math.random() - 0.5) * 5,
+            elapsed: 0, duration: 0.48, onDone: () => piecesGroup.remove(sMesh)
+          });
+        }
+      }
+      callback();
+    }
+  });
+}
+
+function hasAnyValidStepRemaining() {
+  const aliveSet = new Set(game.soldiers.filter(s => s.alive).map(s => sqKey(s.r, s.c)));
+  const remainingTypes = new Set(game.inventory.filter(p => !p.used).map(p => p.type));
+  for (const t of remainingTypes) if (getLegalMoves(game.playerPos.r, game.playerPos.c, t, aliveSet).length > 0) return true;
+  return false;
+}
+
+function checkEndConditions(lastCaptured) {
+  const remP = game.inventory.filter(p => !p.used).length;
+  const remS = game.soldiers.filter(s => s.alive).length;
+  let endReason = null;
+  if (remS === 0) endReason = '🏆 Enlightened Victory! All 6 Inner Demons conquered!';
+  else if (remP === 0) endReason = '♟ All 6 moves completed!';
+  else if (!hasAnyValidStepRemaining()) endReason = '⛔ No valid step remaining!';
+
+  if (endReason) endGame(endReason);
+  else if (lastCaptured) setStatusBanner(`⚔️ Conquered ${lastCaptured.icon} ${lastCaptured.name}! ${remP} move(s) left.`);
+  else setStatusBanner(`Moved to ${sqName(game.playerPos.r, game.playerPos.c)}. ${remP} move(s) left!`);
+}
+
+function endGame(reason) {
+  stopTimer(); game.isOver = true; clearHighlights();
+  if (game.capturedCount === 6) sfxWin(); else sfxEnd();
+  if (mp.active) recordMultiplayerTurn(reason);
+  else showSinglePlayerGameOver(reason);
+}
+
+function advanceDifficulty() {
+  const idx = DIFF_ORDER.indexOf(currentDifficulty);
+  if (idx < DIFF_ORDER.length - 1) { currentDifficulty = DIFF_ORDER[idx + 1]; return true; }
+  return false;
+}
+
+function showSinglePlayerGameOver(reason) {
+  const prevDiff = currentDifficulty, leveledUp = advanceDifficulty();
+  updateDifficultyBadge();
+  const conqueredList = game.soldiers.filter(s => !s.alive).map(s => `${s.icon} ${s.name}`).join(', ') || 'None';
+
+  document.getElementById('go-title').textContent = '🏁 Game Over — Final Score Board';
+  document.getElementById('go-body').innerHTML = `
+    <div class="score-summary-hero">
+      <div style="font-size:0.88rem; color:var(--muted); margin-bottom:4px;">${reason}</div>
+      <div class="big">${game.capturedCount} / 6 Conquered</div>
+      <div style="margin-top:6px; font-weight:700;">
+        Total Score: <span style="color:var(--gold)">${game.score} pts</span> &nbsp;•&nbsp;
+        Time: <span style="color:var(--cyan)">${formatMs(game.elapsedMs)}</span>
+      </div>
+    </div>
+    <div class="rule-card">
+      <h4>📊 Battle Summary</h4>
+      <p>
+        • Conquered: <strong>${conqueredList}</strong><br>
+        • Completed Level: <strong style="text-transform:uppercase">${prevDiff}</strong> &nbsp;|&nbsp; Moves Used: <strong>${game.movesUsed} / 6</strong><br>
+        • ${leveledUp
+          ? `🔥 <strong>Level Up!</strong> Next game difficulty increased to <strong style="text-transform:uppercase; color:var(--gold)">${currentDifficulty}</strong>!`
+          : `👑 Playing at highest difficulty: <strong style="color:var(--crimson)">DIFFICULT</strong>`}
+      </p>
+    </div>`;
+  document.getElementById('go-footer').innerHTML = `
+    <button class="btn" onclick="closeModal('modal-gameover'); triggerShowMe(true);">✨ Show Trick</button>
+    <button class="btn btn-gold" onclick="closeModal('modal-gameover'); startSinglePlayerGame();">▶ Play Next (${currentDifficulty.toUpperCase()})</button>`;
+  openModal('modal-gameover');
+}
+
+/* 5. SHOW ME SLOW TRICK */
+function triggerShowMe(fromGameOver = false) {
+  if (game.isAnimating || game.isDemo) return;
+  if (mp.active && !game.isOver && !fromGameOver) {
+    setStatusBanner('Finish your multiplayer turn first, then view the trick on the Scoreboard!');
+    return;
+  }
+  stopTimer(); game.isDemo = true; game.demoCancel = false; game.isOver = false;
+  game.playerPos = { ...game.puzzle.startPos };
+  game.soldiers = game.puzzle.soldiers.map(s => ({ ...s, alive: true }));
+  game.inventory = buildFreshInventory();
+  game.selectedPieceIdx = null; game.capturedCount = 0; game.score = 0; game.movesUsed = 0;
+  document.getElementById('btn-show-me').style.display = 'none';
+  document.getElementById('btn-stop-demo').style.display = '';
+  document.getElementById('status-banner').classList.add('demo');
+  rebuild3DPieces(); clearHighlights(); renderEnemiesStrip(); renderPieceTray(); updateHUD();
+  runDemoStep(0);
+}
+
+function runDemoStep(stepIdx) {
+  if (game.demoCancel) return;
+  const solution = game.puzzle.solution;
+  if (stepIdx >= solution.length) {
+    game.isDemo = false;
+    document.getElementById('btn-show-me').style.display = '';
+    document.getElementById('btn-stop-demo').style.display = 'none';
+    document.getElementById('status-banner').classList.remove('demo');
+    setStatusBanner('✨ Trick Complete! All 6 Inner Demons conquered! Press ↻ New or pick a piece to replay.');
+    sfxWin(); return;
+  }
+  const step = solution[stepIdx];
+  const invIdx = game.inventory.findIndex(p => !p.used && p.type === step.piece);
+  game.selectedPieceIdx = invIdx; renderPlayerPieceMesh(); renderPieceTray();
+  clearHighlights();
+  setHlColor(highlightMeshes[step.from.r][step.from.c], 0xf5b942, 0.35); highlightMeshes[step.from.r][step.from.c].visible = true;
+  setHlColor(highlightMeshes[step.to.r][step.to.c], 0xef4d5e, 0.55); highlightMeshes[step.to.r][step.to.c].visible = true;
+
+  const meta = PIECE_META[step.piece];
+  setStatusBanner(`✨ Demo ${stepIdx + 1}/6: ${meta.icon} ${meta.label} ${sqName(step.from.r, step.from.c)} → ${sqName(step.to.r, step.to.c)} conquers ${step.enemyIcon} ${step.enemyName}!`);
+  setTimeout(() => {
+    if (game.demoCancel) return;
+    const cap = game.soldiers.find(s => s.id === step.soldierId);
+    animate3DMove(step.from, step.to, step.piece, cap, () => {
+      if (game.demoCancel) return;
+      if (cap) cap.alive = false;
+      game.inventory[invIdx].used = true; game.playerPos = { ...step.to };
+      game.capturedCount++; game.score += 100 + (game.capturedCount === 6 ? 200 : 0); game.movesUsed++;
+      game.selectedPieceIdx = null; clearHighlights(); renderPlayerPieceMesh(); renderEnemiesStrip(); renderPieceTray(); updateHUD();
+      setTimeout(() => runDemoStep(stepIdx + 1), 650);
+    });
+  }, 950);
+}
+
+function stopShowMe() {
+  game.demoCancel = true; game.isDemo = false; activeAnimations = [];
+  document.getElementById('btn-show-me').style.display = '';
+  document.getElementById('btn-stop-demo').style.display = 'none';
+  document.getElementById('status-banner').classList.remove('demo');
+  startPuzzle(game.puzzle, !mp.active);
+}
+
+/* 6. MULTIPLAYER TOURNAMENT */
+function startSinglePlayerGame() {
+  mp.active = false;
+  document.getElementById('mp-banner').style.display = 'none';
+  document.getElementById('m-mp-tag').style.display = 'none';
+  startPuzzle(generatePuzzle(currentDifficulty), true);
+}
+function startFreshSingleOrReplay() { if (mp.active) openSetupModal(); else startSinglePlayerGame(); }
+
+function startMultiplayerTournament() {
+  mp.active = true; mp.currentRound = 1; mp.currentPlayerIdx = 0; mp.stats = [];
+  for (let i = 0; i < mp.playerCount; i++) {
+    mp.stats.push({ name: mp.names[i].trim() || `Player ${i + 1}`, totalSoldiers: 0, totalScore: 0, totalTimeMs: 0, history: [] });
+  }
+  prepareMultiplayerTurn();
+}
+
+function prepareMultiplayerTurn() {
+  mp.waitingForTurnStart = true;
+  const p = mp.stats[mp.currentPlayerIdx];
+  updateMPBanner(); updateDifficultyBadge();
+  document.getElementById('turn-ready-round').textContent = `Round ${mp.currentRound} of ${mp.roundCount} • ${currentDifficulty.toUpperCase()}`;
+  document.getElementById('turn-ready-name').textContent = p.name;
+  openModal('modal-turn-ready');
+}
+
+function beginMultiplayerTurn() {
+  closeModal('modal-turn-ready');
+  mp.waitingForTurnStart = false;
+  startPuzzle(generatePuzzle(currentDifficulty), true);
+}
+
+function recordMultiplayerTurn(reason) {
+  const p = mp.stats[mp.currentPlayerIdx];
+  p.totalSoldiers += game.capturedCount; p.totalScore += game.score; p.totalTimeMs += game.elapsedMs;
+  p.history.push({ round: mp.currentRound, diff: currentDifficulty, soldiers: game.capturedCount, score: game.score, timeMs: game.elapsedMs });
+
+  const isLastPlayerInRound = mp.currentPlayerIdx >= mp.playerCount - 1;
+  const isFinalRound = mp.currentRound >= mp.roundCount;
+  const tournamentOver = isLastPlayerInRound && isFinalRound;
+  const sorted = [...mp.stats].sort((a, b) => b.totalScore - a.totalScore || b.totalSoldiers - a.totalSoldiers || a.totalTimeMs - b.totalTimeMs);
+
+  const rowsHtml = sorted.map((pl, idx) => `
+    <tr class="${idx === 0 ? 'rank-1' : ''}">
+      <td>#${idx + 1}</td><td>${escapeHtml(pl.name)}</td><td>${pl.totalSoldiers}</td><td>${pl.totalScore}</td><td>${formatMs(pl.totalTimeMs)}</td>
+    </tr>`).join('');
+
+  let levelUpMsg = '';
+  if (isLastPlayerInRound && !isFinalRound) {
+    const prev = currentDifficulty;
+    if (advanceDifficulty()) levelUpMsg = `<div style="margin-top:6px; color:var(--gold); font-weight:700;">🔥 Round ${mp.currentRound} Complete! Difficulty increases: ${prev.toUpperCase()} → ${currentDifficulty.toUpperCase()}</div>`;
+  }
+
+  document.getElementById('go-title').textContent = tournamentOver ? '🏆 Tournament Complete — Final Leaderboard' : `📊 ${p.name}'s Turn Complete`;
+  document.getElementById('go-body').innerHTML = `
+    <div class="score-summary-hero">
+      <div style="font-size:0.84rem; color:var(--muted);">${reason}</div>
+      <div class="big">${game.capturedCount} / 6 Conquered</div>
+      <div>${escapeHtml(p.name)} scored <strong style="color:var(--gold)">${game.score} pts</strong> in <strong>${formatMs(game.elapsedMs)}</strong></div>
+      ${tournamentOver ? `<div style="margin-top:8px; font-size:1.15rem; font-weight:900; color:var(--emerald);">👑 Champion: ${escapeHtml(sorted[0].name)}!</div>` : ''}
+      ${levelUpMsg}
+    </div>
+    <table class="score-table">
+      <thead><tr><th>Rank</th><th>Player</th><th>Conquered</th><th>Score</th><th>Time</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+  document.getElementById('go-footer').innerHTML = tournamentOver
+    ? `<button class="btn" onclick="closeModal('modal-gameover'); triggerShowMe(true);">✨ Show Last Trick</button><button class="btn btn-gold" onclick="closeModal('modal-gameover'); openSetupModal();">🎮 New Tournament</button>`
+    : `<button class="btn" onclick="closeModal('modal-gameover'); triggerShowMe(true);">✨ Show Trick</button><button class="btn btn-emerald" onclick="closeModal('modal-gameover'); advanceMultiplayerPointer();">➡ Next Turn</button>`;
+  openModal('modal-gameover');
+}
+
+function advanceMultiplayerPointer() {
+  if (mp.currentPlayerIdx < mp.playerCount - 1) mp.currentPlayerIdx++;
+  else { mp.currentPlayerIdx = 0; mp.currentRound++; }
+  prepareMultiplayerTurn();
+}
+
+function updateMPBanner() {
+  const banner = document.getElementById('mp-banner'), mTag = document.getElementById('m-mp-tag');
+  if (!mp.active) { banner.style.display = 'none'; mTag.style.display = 'none'; return; }
+  const p = mp.stats[mp.currentPlayerIdx];
+  banner.style.display = 'block';
+  document.getElementById('mp-player-turn').textContent = `👤 ${p.name}`;
+  document.getElementById('mp-round-info').textContent = `Round ${mp.currentRound} / ${mp.roundCount}`;
+  document.getElementById('mp-mini-standings').textContent = mp.stats.map(s => `${s.name}: ${s.totalScore}pts`).join('  |  ');
+  mTag.style.display = 'inline-flex';
+  mTag.textContent = `${p.name} (R${mp.currentRound}/${mp.roundCount})`;
+}
+
+/* 7. UI RENDERING, TIMER & MODALS */
+function renderEnemiesStrip() {
+  const strip = document.getElementById('enemies-strip');
+  strip.innerHTML = '';
+  ENEMY_TYPES.forEach(et => {
+    const s = game.soldiers.find(item => item.enemyKey === et.key);
+    const conquered = s ? !s.alive : false;
+    const chip = document.createElement('div');
+    chip.className = 'enemy-chip' + (conquered ? ' conquered' : '');
+    chip.style.borderColor = conquered ? '' : et.cssColor + '66';
+    chip.innerHTML = `<span>${et.icon}</span><span>${et.name}</span>`;
+    strip.appendChild(chip);
+  });
+}
+
+function renderPieceTray() {
+  const grid = document.getElementById('pieces-grid');
+  grid.innerHTML = '';
+  let unused = 0;
+  game.inventory.forEach((item, idx) => {
+    if (!item.used) unused++;
+    const meta = PIECE_META[item.type];
+    const btn = document.createElement('button');
+    btn.className = 'piece-card' + (item.used ? ' used' : '') + (game.selectedPieceIdx === idx ? ' selected' : '');
+    btn.disabled = item.used;
+    btn.onclick = () => selectInventoryPiece(idx);
+    btn.innerHTML = `<span class="piece-icon">${meta.icon}</span><span class="piece-name">${meta.label}</span><span class="piece-sub">${meta.sub}</span>`;
+    grid.appendChild(btn);
+  });
+  document.getElementById('pieces-left-label').textContent = `${unused} / 6`;
+}
+
+function updateHUD() {
+  const movesLeft = 6 - game.movesUsed, tStr = formatMs(game.elapsedMs);
+  document.getElementById('d-soldiers').textContent = `${game.capturedCount} / 6`;
+  document.getElementById('d-score').textContent = game.score;
+  document.getElementById('d-time').textContent = tStr;
+  document.getElementById('d-moves').textContent = movesLeft;
+  document.getElementById('m-soldiers').textContent = `${game.capturedCount}/6`;
+  document.getElementById('m-score').textContent = game.score;
+  document.getElementById('m-time').textContent = tStr;
+  document.getElementById('m-moves').textContent = movesLeft;
+}
+
+function updateDifficultyBadge() {
+  const el = document.getElementById('diff-badge');
+  el.textContent = currentDifficulty;
+  el.className = 'diff-badge diff-' + currentDifficulty;
+}
+function setStatusBanner(msg) { document.getElementById('status-banner').textContent = msg; }
+
+function startTimer() {
+  stopTimer();
+  game.startTimeMs = performance.now() - game.elapsedMs;
+  game.timerInterval = setInterval(() => {
+    game.elapsedMs = performance.now() - game.startTimeMs;
+    const tStr = formatMs(game.elapsedMs);
+    document.getElementById('d-time').textContent = tStr;
+    document.getElementById('m-time').textContent = tStr;
+  }, 100);
+}
+function stopTimer() { if (game.timerInterval) { clearInterval(game.timerInterval); game.timerInterval = null; } }
+
+function formatMs(ms) {
+  const totalSec = ms / 1000, mins = Math.floor(totalSec / 60), secs = Math.floor(totalSec % 60), tenths = Math.floor((ms % 1000) / 100);
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+}
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openRules() { openModal('modal-rules'); }
+
+function openSetupModal() { selectSetupDiff(currentDifficulty); renderMPNameInputs(); openModal('modal-setup'); }
+function selectSetupMode(m) {
+  setupConfig.mode = m;
+  document.getElementById('setup-single').classList.toggle('active', m === 'single');
+  document.getElementById('setup-multi').classList.toggle('active', m === 'multi');
+  document.getElementById('mp-setup-fields').style.display = m === 'multi' ? 'flex' : 'none';
+}
+function selectSetupDiff(d) {
+  setupConfig.difficulty = d;
+  document.querySelectorAll('.diff-opt').forEach(b => b.classList.toggle('active', b.dataset.diff === d));
+}
+function setPlayerCount(n) {
+  setupConfig.playerCount = n;
+  Array.from(document.getElementById('mp-count-row').children).forEach((b, i) => b.classList.toggle('active', i + 2 === n));
+  renderMPNameInputs();
+}
+function setRoundCount(n) {
+  setupConfig.roundCount = n;
+  Array.from(document.getElementById('mp-rounds-row').children).forEach((b, i) => b.classList.toggle('active', i + 1 === n));
+}
+function renderMPNameInputs() {
+  const cont = document.getElementById('mp-names-container');
+  cont.innerHTML = '';
+  for (let i = 0; i < setupConfig.playerCount; i++) {
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.maxLength = 18; inp.placeholder = `Player ${i + 1} Name`;
+    inp.value = mp.names[i] || `Player ${i + 1}`;
+    inp.oninput = (e) => { mp.names[i] = e.target.value; };
+    cont.appendChild(inp);
+  }
+}
+function applySetupAndStart() {
+  currentDifficulty = setupConfig.difficulty;
+  closeModal('modal-setup');
+  if (setupConfig.mode === 'single') startSinglePlayerGame();
+  else { mp.playerCount = setupConfig.playerCount; mp.roundCount = setupConfig.roundCount; startMultiplayerTournament(); }
+}
+
+/* 8. BOOTSTRAP */
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof THREE === 'undefined') {
+    document.getElementById('board-container').innerHTML =
+      '<div style="padding:24px;color:#ef4d5e;font-weight:700;">Three.js failed to load. Please check your internet connection and reload.</div>';
+    return;
+  }
+  setLayoutMode(window.innerWidth < 860 ? 'mobile' : 'desktop');
+  initThreeScene();
+  startSinglePlayerGame();
+});
+</script>
+</body>
+</html>
